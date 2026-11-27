@@ -1,5 +1,5 @@
 import { Button, Group, Loader, Notification, Space } from "@mantine/core";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Hex, TransactionReceipt } from "viem";
 import { useWaitForTransactionReceipt } from "wagmi";
 
@@ -11,13 +11,30 @@ function Confirming({
   onConfirmed: (receipt: TransactionReceipt | null) => void;
 }) {
   const { data, status } = useWaitForTransactionReceipt({ hash });
+
+  // Keep the latest callback in a ref so that re-rendering the parent (which
+  // typically passes a new inline function) does not re-trigger the effect.
+  const onConfirmedRef = useRef(onConfirmed);
   useEffect(() => {
-    if (status === "success") {
-      onConfirmed(data ?? null);
-    } else if (status === "error") {
-      onConfirmed(null);
+    onConfirmedRef.current = onConfirmed;
+  });
+
+  // Notify the parent exactly once per transaction. Without this guard the
+  // effect re-runs on every parent render while the status is "success", which
+  // can repeatedly refetch state and re-render the parent.
+  const notified = useRef(false);
+  useEffect(() => {
+    if (notified.current) {
+      return;
     }
-  }, [data, status, onConfirmed]);
+    if (status === "success") {
+      notified.current = true;
+      onConfirmedRef.current(data ?? null);
+    } else if (status === "error") {
+      notified.current = true;
+      onConfirmedRef.current(null);
+    }
+  }, [data, status]);
 
   return (
     <Button disabled={true}>
@@ -54,11 +71,13 @@ function TransactionButton({
   onConfirmed?: (receipt: TransactionReceipt) => void;
 }) {
   const [hash, setHash] = useState<Hex | null>(null);
-  const [reverted, setReverted] = useState(false);
   const errorTitle = `Failed to ${description ?? "execute transaction"}`;
+  const resetTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // Clear the pending grace-period timer if the component unmounts.
+  useEffect(() => () => clearTimeout(resetTimer.current), []);
 
   const send = useCallback(() => {
-    setReverted(false);
     onTransaction({
       onSuccess: (hash) => setHash(hash),
     });
@@ -75,10 +94,10 @@ function TransactionButton({
         // This gives feedback to the user that the transaction succeeded, while
         // preventing the transaction button from "flashing" back to enabled in
         // the time it takes for block chain state to propagate through the app.
-        setTimeout(() => setHash(null), 15000);
+        clearTimeout(resetTimer.current);
+        resetTimer.current = setTimeout(() => setHash(null), 15000);
       } else {
         setHash(null);
-        setReverted(false);
       }
     },
     [onConfirmed],
@@ -98,15 +117,6 @@ function TransactionButton({
       {error && (
         <Notification color="red" title={errorTitle} onClose={onReset}>
           {error.message}
-        </Notification>
-      )}
-      {reverted && (
-        <Notification
-          color="red"
-          title={errorTitle}
-          onClose={() => setReverted(false)}
-        >
-          Transaction reverted.
         </Notification>
       )}
     </>

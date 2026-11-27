@@ -1,5 +1,5 @@
 import { bootstrap, deployer } from "@safe-research/erc-7955";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   type Address,
   encodeFunctionData,
@@ -19,32 +19,50 @@ function useDeployFactoryTransaction({
   const [transaction, setTransaction] =
     useState<TransactionRequestEIP7702 | null>(null);
 
-  const buildTransaction = useCallback(async () => {
+  useEffect(() => {
+    // Set when the inputs change or the component unmounts, so that a slower,
+    // older signing run cannot overwrite a newer transaction.
+    let current = true;
+
     if (!bootstrapAddress || nonce === undefined) {
       setTransaction(null);
-      return;
+      return () => {
+        current = false;
+      };
     }
 
-    const authorization = await signAuthorization({
-      privateKey: deployer.privateKey,
-      chainId: 0,
-      address: bootstrapAddress,
-      nonce,
-    });
+    (async () => {
+      try {
+        const authorization = await signAuthorization({
+          privateKey: deployer.privateKey,
+          chainId: 0,
+          address: bootstrapAddress,
+          nonce,
+        });
 
-    setTransaction({
-      to: bootstrapAddress,
-      data: encodeFunctionData({
-        abi: bootstrap.abi,
-        functionName: "deploy",
-      }),
-      authorizationList: [authorization],
-    });
+        if (current) {
+          setTransaction({
+            to: bootstrapAddress,
+            data: encodeFunctionData({
+              abi: bootstrap.abi,
+              functionName: "deploy",
+            }),
+            authorizationList: [authorization],
+          });
+        }
+      } catch {
+        // Signing only fails on malformed inputs; leave the step disabled
+        // rather than surfacing an unhandled promise rejection.
+        if (current) {
+          setTransaction(null);
+        }
+      }
+    })();
+
+    return () => {
+      current = false;
+    };
   }, [bootstrapAddress, nonce]);
-
-  useEffect(() => {
-    buildTransaction();
-  }, [buildTransaction]);
 
   return transaction;
 }

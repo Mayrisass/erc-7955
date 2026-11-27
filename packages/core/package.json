@@ -1,5 +1,5 @@
 {
-  "name": "@erc-7955/core",
+  "name": "@safe-research/erc-7955",
   "version": "1.0.0",
   "description": "ERC-7955: Permissionless CREATE2 Factory",
   "type": "module",
@@ -10,7 +10,7 @@
     "compile": "hardhat compile",
     "test": "hardhat test nodejs"
   },
-  "author": "Safe Research <research@safe.dev>",
+  "author": "Safe Research <research@safe.global>",
   "license": "GPL-3.0-only",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox-viem": "^5.0.0",

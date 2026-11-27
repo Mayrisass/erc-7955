@@ -1,3 +1,4 @@
+import { type Address, concat, type Hex, keccak256, size, slice } from "viem";
 import Bootstrap from "../build/artifacts/contracts/Bootstrap.sol/Bootstrap.json" with {
   type: "json",
 };
@@ -5,6 +6,11 @@ import Bootstrap from "../build/artifacts/contracts/Bootstrap.sol/Bootstrap.json
 const bootstrap = Object.freeze({
   abi: Bootstrap.abi,
   bytecode: Bootstrap.bytecode as `0x${string}`,
+  deployedBytecode: Bootstrap.deployedBytecode as `0x${string}`,
+  immutableReferences: Bootstrap.immutableReferences as Record<
+    string,
+    { start: number; length: number }[]
+  >,
 });
 
 const deployer = Object.freeze({
@@ -24,4 +30,46 @@ const factory = Object.freeze({
     "0x2ad75e1e9642e6fce7d293d52fa5a8f62a79a2079abb7402256add02d6e8bc30",
 });
 
-export { bootstrap, deployer, factory };
+/**
+ * Checks whether `code` is the deployed runtime code of a Bootstrap contract
+ * deployed at `address`.
+ *
+ * The Bootstrap runtime embeds its own address (as an immutable). Every
+ * other byte must match the compiled runtime exactly, and the embedded value
+ * must equal the EIP-7702 delegation designator hash for `address`, i.e.
+ * `keccak256(0xef0100 ++ address)`.
+ */
+function isBootstrapRuntime(code: Hex, address: Address): boolean {
+  const expected = bootstrap.deployedBytecode;
+  if (size(code) !== size(expected)) {
+    return false;
+  }
+
+  const immutables = Object.values(bootstrap.immutableReferences).flat();
+  const isImmutable = (index: number) =>
+    immutables.some(
+      ({ start, length }) => index >= start && index < start + length,
+    );
+
+  const actual = code.slice(2);
+  const want = expected.slice(2);
+  for (let i = 0; i < want.length / 2; i++) {
+    if (isImmutable(i)) {
+      continue;
+    }
+    if (actual.slice(i * 2, i * 2 + 2) !== want.slice(i * 2, i * 2 + 2)) {
+      return false;
+    }
+  }
+
+  // Every immutable must be the delegation designator hash of this address.
+  const delegation = keccak256(concat(["0xef0100", address]));
+  return (
+    immutables.length > 0 &&
+    immutables.every(
+      ({ start, length }) => slice(code, start, start + length) === delegation,
+    )
+  );
+}
+
+export { bootstrap, deployer, factory, isBootstrapRuntime };

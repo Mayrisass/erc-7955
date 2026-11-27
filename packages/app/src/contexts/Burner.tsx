@@ -43,12 +43,16 @@ function useBurnerClient() {
   return useContext(BurnerContext);
 }
 
+// Reads the burner key once per mount. Reading it during render would perform
+// a localStorage write as a side effect on every render.
+function useBurnerKey() {
+  const [privateKey] = useState(() => getBurnerPrivateKey());
+  const account = useMemo(() => privateKeyToAccount(privateKey), [privateKey]);
+  return { account, privateKey };
+}
+
 function useBurnerAccount() {
-  const [account] = useState(() => {
-    const privateKey = getBurnerPrivateKey();
-    return privateKeyToAccount(privateKey);
-  });
-  return account;
+  return useBurnerKey().account;
 }
 
 export {
@@ -56,4 +60,5 @@ export {
   getBurnerPrivateKey,
   useBurnerClient,
   useBurnerAccount,
+  useBurnerKey,
 };

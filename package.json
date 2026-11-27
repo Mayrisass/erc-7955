@@ -11,7 +11,7 @@
     "build": "npm run compile -w packages/core && tsc --build && npm run build -w packages/app",
     "lint": "biome check",
     "start": "npm start -w packages/app --",
-    "test": "npm test -w packages/core --"
+    "test": "npm test -w packages/core -- && npm test -w packages/app"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.2",

@@ -1,12 +1,6 @@
 import { useMemo } from "react";
-import { defineChain } from "viem";
-import {
-  createConfig,
-  unstable_connector,
-  useAccount,
-  useConfig,
-  WagmiProvider,
-} from "wagmi";
+import { useAccount, useConfig, WagmiProvider } from "wagmi";
+import { createConnectedConfig } from "$/lib/connected-config.ts";
 
 // Wagmi typically only allows you to use configured chains. This makes sense
 // for most dapps, but not here: we want to use whatever chain the current
@@ -15,33 +9,17 @@ import {
 // configured in their MetaMask without this dapp knowing about it in advance.
 function ConnectorProvider({ children }: React.PropsWithChildren) {
   const parentConfig = useConfig();
-  const { chainId, connector } = useAccount();
+  const { chainId, connector, addresses } = useAccount();
   const connectorConfig = useMemo(
     () =>
-      chainId && connector
-        ? createConfig({
-            chains: [
-              defineChain({
-                id: chainId,
-                name: "unknown",
-                nativeCurrency: {
-                  name: "unknown",
-                  symbol: "UNKN",
-                  decimals: 18,
-                },
-                rpcUrls: {
-                  default: {
-                    http: [],
-                  },
-                },
-              }),
-            ],
-            transports: {
-              [chainId]: unstable_connector(connector),
-            },
+      chainId && connector && addresses && addresses.length > 0
+        ? createConnectedConfig({
+            chainId,
+            connector,
+            accounts: addresses,
           })
         : parentConfig,
-    [chainId, connector, parentConfig],
+    [chainId, connector, addresses, parentConfig],
   );
 
   return <WagmiProvider config={connectorConfig}>{children}</WagmiProvider>;

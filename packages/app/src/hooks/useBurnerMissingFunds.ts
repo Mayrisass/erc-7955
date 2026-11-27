@@ -51,7 +51,10 @@ function useBurnerMissingFunds({
       return { balance, missingFunds };
     },
     enabled: !!client,
-    refetchInterval: 1000,
+    // Balance and gas estimates change slowly; polling every second is
+    // needlessly expensive on public RPCs. react-query already pauses interval
+    // refetching while the tab is hidden.
+    refetchInterval: 5000,
   });
 
   useEffect(() => {

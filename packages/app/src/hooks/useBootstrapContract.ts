@@ -1,3 +1,4 @@
+import { isBootstrapRuntime } from "@safe-research/erc-7955";
 import {
   useCallback,
   useEffect,
@@ -5,7 +6,7 @@ import {
   useState,
   useTransition,
 } from "react";
-import { type Address, type Hex, isAddress, size } from "viem";
+import { type Address, type Hex, isAddress } from "viem";
 import { getCode } from "viem/actions";
 import { useClient } from "wagmi";
 
@@ -53,9 +54,13 @@ function useBootstrapContract() {
       return;
     }
 
-    if (size(bytecode ?? "0x") > 0) {
+    // The address comes from localStorage, which is user-controlled. Only use
+    // it if the code at that address is really the Bootstrap runtime, since the
+    // deployer account is delegated to whatever contract lives there.
+    if (bytecode && isBootstrapRuntime(bytecode, bootstrap)) {
       setAddress(bootstrap);
     } else {
+      setBootstrap(client.chain.id, null);
       setAddress(null);
     }
   }, [client]);
