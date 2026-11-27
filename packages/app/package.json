@@ -6,7 +6,7 @@
   "scripts": {
     "build": "vite build",
     "start": "vite",
-    "test": "node --test status/test/*.test.ts"
+    "test": "node --test status/test/*.test.ts test/*.test.ts"
   },
   "author": "Safe Research <research@safe.global>",
   "license": "GPL-3.0-only",
