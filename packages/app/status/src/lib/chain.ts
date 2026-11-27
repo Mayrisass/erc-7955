@@ -104,7 +104,8 @@ async function isErc7702Supported({ client }: { client: Client }) {
     return response.data === request.data;
   } catch (e) {
     const err = e as CallErrorType;
-    switch (err.cause.name) {
+    // `cause` is optional on viem errors, so guard before reading `name`.
+    switch (err.cause?.name) {
       case "HttpRequestError":
       case "TimeoutError":
         throw err;

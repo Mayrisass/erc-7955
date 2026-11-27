@@ -8,7 +8,7 @@ This project implements [ERC-7955: Permissionless CREATE2 Factory](https://ercs.
 
 ## Deployment
 
-The address of the CREATE2 factory is `0xC0DEb853af168215879d284cc8B4d0A645fA9b0E` on all EVM chains.
+The address of the CREATE2 factory is `0xC0DEb853af168215879d284cc8B4d0A645fA9b0E`. It can be deployed to any EVM chain that supports EIP-7702 (Pectra or later). Chains without EIP-7702 support cannot be bootstrapped. The web app checks for support, and the status page (`/status/`) shows which chains support it.
 
 ## How it Works
 
@@ -22,6 +22,31 @@ bytes32 constant SALT = hex"0000000000000000000000000000000000000000000000000000
 This guarantees a CREATE2 factory contract be deployed to `0xC0DEb853af168215879d284cc8B4d0A645fA9b0E` with well-known code. Note that it is not an issue for the deployer private key to be publicly known, as transactions from that account, or alternate delegations can neither prevent the successful deployment of the CREATE2 factory, or have it contain unexpected runtime code.
 
 This repository contains a reference `Bootstrap` contract that the deployer account can delegate to in order to deploy the CREATE2 factory.
+
+The deployer key and mnemonic are published in `packages/core/src/index.ts` on purpose. Anyone can use them, so do not send funds to the deployer address. The `Bootstrap` runtime is verified by `isBootstrapRuntime` (in `packages/core/src/index.ts`) before the web app delegates to it.
+
+## Development
+
+Requires Node.js 22 (see `.nvmrc`).
+
+```sh
+npm ci              # install dependencies
+npm run compile -w packages/core   # compile the Solidity contracts (required before the app builds)
+npm run build       # compile, type-check, and build the web app into packages/app/dist
+npm test            # core contract tests and status page unit tests
+npm run lint        # Biome lint and format check
+npm start           # run the web app locally with Vite
+```
+
+The contract tests in `packages/core/test/Factory.spec.ts` check that the
+constants in `packages/core/contracts/Factory.sol` match the TypeScript
+constants in `packages/core/src/index.ts`, and that the CREATE2 salt is the
+first one that produces a `0xC0DE` address.
+
+The status page (`packages/app/status`, served at `/status/`) fetches the chain
+list from ChainList and checks each RPC endpoint. It reports a chain as
+"deployed" if the factory's runtime code is present, "supported" if an
+EIP-7702 test call succeeds, and "not supported" or "unavailable" otherwise.
 
 ## Known Issues
 

@@ -13,7 +13,6 @@ class ChainRegistry {
   #statuses: Record<number, Channel<Status | null>>;
   #counters: Channel<Counters>;
   #queue: Queue;
-  #background?: Promise<void>;
 
   constructor({
     chains,
@@ -29,12 +28,13 @@ class ChainRegistry {
       unavailable: 0,
     });
     this.#queue = new Queue(concurrency);
-    this.#background = this.#initialize(chains);
+    this.#initialize(chains);
   }
 
-  async #initialize(chains: Chain[]) {
+  #initialize(chains: Chain[]) {
     for (const chain of chains) {
-      this.#queue.enqueue(() => this.#updateStatus(chain));
+      // Tasks run in the background; `detectStatus` never rejects.
+      void this.#queue.enqueue(() => this.#updateStatus(chain));
     }
   }
 
@@ -79,13 +79,8 @@ class ChainRegistry {
     return status.subscribe(callback);
   }
 
-  public get background() {
-    return this.#background;
-  }
-
   public destroy() {
     this.#queue.clear();
-    this.#background = undefined;
   }
 }
 

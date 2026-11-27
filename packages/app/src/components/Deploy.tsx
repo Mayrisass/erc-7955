@@ -245,6 +245,22 @@ function Connected() {
     <Center>
       <Loader />
     </Center>
+  ) : support.isError ? (
+    <Alert icon={"⚠"} title="Error" color="red">
+      <Stack>
+        <Text size="sm">
+          Could not check whether the connected network supports EIP-7702.
+        </Text>
+        <Text size="xs" c="dimmed">
+          {support.error.message}
+        </Text>
+        <Group justify="flex-end">
+          <Button color="gray" onClick={() => support.refetch()}>
+            Retry
+          </Button>
+        </Group>
+      </Stack>
+    </Alert>
   ) : support.data !== true && !dismiss7702Check ? (
     <Alert icon={"⚠"} title="Error" color="red">
       <Stack>

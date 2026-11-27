@@ -44,7 +44,14 @@ function useSupports7702() {
           stateOverride: [echo],
         });
         return response === message;
-      } catch {
+      } catch (e) {
+        // Network failures say nothing about EIP-7702 support, so surface them
+        // as query errors. Any other error means the node rejected the type
+        // 0x4 call, which we treat as "not supported".
+        const name = (e as { cause?: { name?: string } }).cause?.name;
+        if (name === "HttpRequestError" || name === "TimeoutError") {
+          throw e;
+        }
         return false;
       }
     },

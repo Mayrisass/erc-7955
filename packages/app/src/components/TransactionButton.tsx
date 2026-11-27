@@ -71,7 +71,6 @@ function TransactionButton({
   onConfirmed?: (receipt: TransactionReceipt) => void;
 }) {
   const [hash, setHash] = useState<Hex | null>(null);
-  const [reverted, setReverted] = useState(false);
   const errorTitle = `Failed to ${description ?? "execute transaction"}`;
   const resetTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -79,7 +78,6 @@ function TransactionButton({
   useEffect(() => () => clearTimeout(resetTimer.current), []);
 
   const send = useCallback(() => {
-    setReverted(false);
     onTransaction({
       onSuccess: (hash) => setHash(hash),
     });
@@ -100,7 +98,6 @@ function TransactionButton({
         resetTimer.current = setTimeout(() => setHash(null), 15000);
       } else {
         setHash(null);
-        setReverted(false);
       }
     },
     [onConfirmed],
@@ -120,15 +117,6 @@ function TransactionButton({
       {error && (
         <Notification color="red" title={errorTitle} onClose={onReset}>
           {error.message}
-        </Notification>
-      )}
-      {reverted && (
-        <Notification
-          color="red"
-          title={errorTitle}
-          onClose={() => setReverted(false)}
-        >
-          Transaction reverted.
         </Notification>
       )}
     </>
