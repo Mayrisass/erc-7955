@@ -1,5 +1,6 @@
 import {
   Alert,
+  Badge,
   Button,
   Card,
   Center,
@@ -10,6 +11,7 @@ import {
   Stack,
   Stepper,
   Text,
+  UnstyledButton,
 } from "@mantine/core";
 import { bootstrap } from "@safe-research/erc-7955";
 import { useEffect, useState } from "react";
@@ -21,7 +23,7 @@ import {
 import { useAccount, useDeployContract, useSendTransaction } from "wagmi";
 import { Copy } from "$/components/Copy.tsx";
 import { TransactionButton } from "$/components/TransactionButton.tsx";
-import { getBurnerPrivateKey, useBurnerAccount } from "$/contexts/Burner.tsx";
+import { useBurnerKey } from "$/contexts/Burner.tsx";
 import { useBootstrapContract } from "$/hooks/useBootstrapContract.ts";
 import { useBurnerMissingFunds } from "$/hooks/useBurnerMissingFunds.ts";
 import { useDeployFactoryTransaction } from "$/hooks/useDeployFactoryTransaction.ts";
@@ -66,8 +68,9 @@ function FundBurner({
   bootstrap: Address;
   funding: { balance: bigint; missingFunds: bigint } | null;
 }) {
-  const { address } = useBurnerAccount();
-  const privateKey = getBurnerPrivateKey();
+  const { account, privateKey } = useBurnerKey();
+  const { address } = account;
+  const [revealKey, setRevealKey] = useState(false);
   const { sendTransaction, isPending, error, reset } = useSendTransaction();
   const balance = funding?.balance;
   const missingFunds = funding?.missingFunds;
@@ -101,12 +104,19 @@ function FundBurner({
           </Group>
           <Group justify="space-between">
             <Text size="sm">
-              Private key:
-              <Code style={{ filter: "blur(3px)", userSelect: "none" }}>
-                {privateKey}
-              </Code>
+              Private key:{" "}
+              {revealKey ? (
+                <Code>{privateKey}</Code>
+              ) : (
+                <Code>{"•".repeat(16)}</Code>
+              )}
             </Text>
-            <Copy value={privateKey} />
+            <Group gap="xs">
+              <UnstyledButton onClick={() => setRevealKey((shown) => !shown)}>
+                <Badge color="gray">{revealKey ? "hide" : "reveal"}</Badge>
+              </UnstyledButton>
+              <Copy value={privateKey} />
+            </Group>
           </Group>
           <Group align="center">
             <Text size="sm">
@@ -159,7 +169,7 @@ function DeployFactory({
   transaction: TransactionRequestEIP7702 | null;
   onDeployed: () => void;
 }) {
-  const burner = useBurnerAccount();
+  const { account: burner } = useBurnerKey();
   const { sendTransaction, isPending, error, reset } = useSendTransaction();
 
   return (

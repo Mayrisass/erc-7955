@@ -105,10 +105,13 @@ function ChainItem({ chain }: { chain: Chain }) {
 
 function FilteredChains({ chains }: { chains: Chain[] }) {
   const [search, setSearch] = useState("");
-  const re = new RegExp(search, "i");
+  // Plain case-insensitive substring match. Do not build a RegExp from user
+  // input: characters like `(` or `[` are invalid patterns and would throw
+  // during render.
+  const query = search.trim().toLowerCase();
   const filtered = useFilteredList({
     list: chains,
-    predicate: ({ name }) => !!name.match(re),
+    predicate: ({ name }) => name.toLowerCase().includes(query),
     max: 25,
   });
 
